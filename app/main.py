@@ -1,6 +1,6 @@
 import socket
 from dns_header import DNSHeader
-from dns_utils import parse_domain_name, parse_dns_query
+from dns_utils import parse_domain_name, parse_dns_query, parse_questions
 from dns_question import DNSQuestion
 from dns_answer import DNSAnswer
 
@@ -16,24 +16,30 @@ def main():
             query_id, opcode, rd, qdcount = parse_dns_query(buf)
             
             # Create the DNS header with the appropriate values
-            dns_header = DNSHeader(id=query_id, qr=1, opcode=opcode, rd=rd, ancount=1)
+            dns_header = DNSHeader(id=query_id, qr=1, opcode=opcode, rd=rd, qdcount=qdcount, ancount=qdcount)
 
-            # Parse the domain name from the DNS query
-            domain, offset = parse_domain_name(buf, 12)  # Domain starts after the DNS header
+            # Parse the DNS question section
+            questions, offset = parse_questions(buf, 12)  # Domain starts after the DNS header
             
-            # Create the DNS question section
-            dns_question = DNSQuestion(domain)
-            question = dns_question.create_question_section()
+            question_section = b''
+            answer_section = b''
 
-            # Create the DNS answer section
-            dns_answer = DNSAnswer(domain, 60, "8.8.8.8")
-            answer = dns_answer.create_answer_section()
+            # Build question and answer sections
+            for domain, qtype, qclass in questions:
+                # Create the question section
+                dns_question = DNSQuestion(domain)
+                question_section += dns_question.create_question_section()
+                
+                # Create the answer section
+                dns_answer = DNSAnswer(domain, 60, "8.8.8.8")
+                answer_section += dns_answer.create_answer_section()
 
-            dns_header.set_qdcount(1)
-            dns_header.set_ancount(1)  
-
+            # Set QDCOUNT and ANCOUNT in the header
+            dns_header.set_qdcount(len(questions))
+            dns_header.set_ancount(len(questions))
+            
             # Combine header, question, and answer sections into the response
-            response = dns_header.encode() + question + answer
+            response = dns_header.encode() + question_section + answer_section
 
             # Send the DNS response
             udp_socket.sendto(response, source)

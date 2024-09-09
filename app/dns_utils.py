@@ -31,3 +31,19 @@ def parse_domain_name(buf: bytes, offset: int) -> str:
         offset += length
 
     return ".".join(domain_parts), offset + 1
+
+def parse_questions(buf, offset):
+    """Parse DNS question section from buffer starting at offset."""
+    questions = []
+
+    while offset < len(buf):
+        domain, new_offset = parse_domain_name(buf, offset)
+        qtype = int.from_bytes(buf[new_offset:new_offset+2], 'big')
+        qclass = int.from_bytes(buf[new_offset+2:new_offset+4], 'big')
+        questions.append((domain, qtype, qclass))
+        offset = new_offset + 4
+
+        if offset >= len(buf) or buf[offset] == 0:
+            break
+        
+    return questions, offset
