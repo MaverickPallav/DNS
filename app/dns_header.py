@@ -23,5 +23,10 @@ class DNSHeader:
         self.header[4] = (count >> 8) & 0xFF
         self.header[5] = count & 0xFF
     
+    def set_ancount(self, count: int):
+        """Set the Answer Count (ANCOUNT) in the DNS Header."""
+        self.header[6] = (count >> 8) & 0xFF
+        self.header[7] = count & 0xFF
+    
     def encode(self):
         return self.header
