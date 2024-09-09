@@ -2,6 +2,7 @@ import socket
 from dns_header import DNSHeader
 from dns_parser import parse_domain_name
 from dns_question import DNSQuestion
+from dns_answer import DNSAnswer
 
 def main():
     udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -18,7 +19,12 @@ def main():
             dns_question = DNSQuestion(domain)
             question = dns_question.create_question_section()
 
-            response = dns_header.encode() + question
+            dns_answer = DNSAnswer(domain, 60, "8.8.8.8")
+            answer = dns_answer.create_answer_section()
+
+            dns_header.set_ancount(1)
+            
+            response = dns_header.encode() + question + answer
 
             udp_socket.sendto(response, source)
         except Exception as e:
