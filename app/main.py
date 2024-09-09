@@ -29,6 +29,9 @@ def main():
             dns_answer = DNSAnswer(domain, 60, "8.8.8.8")
             answer = dns_answer.create_answer_section()
 
+            dns_header.set_qdcount(1)
+            dns_header.set_ancount(1)  
+
             # Combine header, question, and answer sections into the response
             response = dns_header.encode() + question + answer
 
