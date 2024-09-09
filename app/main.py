@@ -17,9 +17,7 @@ def main():
             
             # Parse the DNS question section
             questions, offset = parse_questions(buf, 12)
-            
-            responses = []
-            
+
             for domain, qtype, qclass in questions:
                 # Forward the query and get the response
                 dns_query = DNSHeader(id=query_id, qr=0, opcode=opcode, rd=rd, ancount=0)
@@ -31,19 +29,29 @@ def main():
                 query_packet = dns_query.encode() + question_section
                 response = forward_query(query_packet)
                 
-                # Extract the answer section from the response
-                answer_section = response[12:]  # Skipping header part
-
                 # Create a DNS header for the response
                 dns_header = DNSHeader(id=query_id, qr=1, opcode=opcode, rd=rd, ancount=1)
                 dns_header.set_qdcount(len(questions))
                 dns_header.set_ancount(1)
-                
-                responses.append(dns_header.encode() + question_section + answer_section)
-            
-            # Send all responses back to the original requester
-            for response in responses:
-                udp_socket.sendto(response, source)
+
+                # The domain_offset should be based on where the domain starts in the question section
+                domain_offset = len(dns_header.encode()) + len(question_section) - (len(dns_question.encode_domain_name()) + 4)
+
+                # Create the answer section using the domain name pointer
+                answer_section = DNSAnswer(domain, ttl=300, ip_address="142.250.72.14").create_answer_section(domain_offset)
+
+                response_packet = dns_header.encode() + question_section + answer_section
+
+                # Debugging info
+                # print(f"Query ID: {query_id}")
+                # print(f"Header length: {len(dns_header.encode())}")
+                # print(f"Question length: {len(question_section)}")
+                # print(f"Answer length: {len(answer_section)}")
+                # print(f"Total response length: {len(response_packet)}")
+                # print(f"Response Packet (hex): {response_packet.hex()}")
+
+                # Send the response back to the original requester
+                udp_socket.sendto(response_packet, source)
 
         except Exception as e:
             print(f"Error receiving or forwarding data: {e}")
