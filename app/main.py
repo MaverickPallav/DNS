@@ -18,10 +18,6 @@ def main():
             # Parse the DNS question section
             questions, offset = parse_questions(buf, 12)
 
-            # Determine the starting offset for the domain name pointer
-            # Domain name starts after the header (12 bytes) and question section
-            domain_offset = 12 + len(questions[0][0]) + 4  # Question length + QTYPE (2 bytes) + QCLASS (2 bytes)
-
             for domain, qtype, qclass in questions:
                 # Forward the query and get the response
                 dns_query = DNSHeader(id=query_id, qr=0, opcode=opcode, rd=rd, ancount=0)
@@ -38,11 +34,11 @@ def main():
                 dns_header.set_qdcount(len(questions))
                 dns_header.set_ancount(1)
 
-                # Create a domain pointer for the answer section
-                domain_pointer = b'\xc0' + (domain_offset).to_bytes(1, byteorder='big')
+                # The domain_offset should be based on where the domain starts in the question section
+                domain_offset = len(dns_header.encode()) + len(question_section) - (len(dns_question.encode_domain_name()) + 4)
 
                 # Create the answer section using the domain name pointer
-                answer_section = DNSAnswer(domain, ttl=300, ip_address="142.250.72.14").create_answer_section(domain_pointer)
+                answer_section = DNSAnswer(domain, ttl=300, ip_address="142.250.72.14").create_answer_section(domain_offset)
 
                 response_packet = dns_header.encode() + question_section + answer_section
 
