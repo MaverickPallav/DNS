@@ -1,6 +1,6 @@
 import socket
 from dns_header import DNSHeader
-from dns_utils import parse_domain_name, parse_dns_query, parse_questions
+from dns_utils import parse_dns_query, parse_questions, forward_query
 from dns_question import DNSQuestion
 from dns_answer import DNSAnswer
 
@@ -12,39 +12,41 @@ def main():
         try:
             buf, source = udp_socket.recvfrom(512)
 
-            # Parse the DNS query to get relevant information
+            # Parse the DNS query
             query_id, opcode, rd, qdcount = parse_dns_query(buf)
             
-            # Create the DNS header with the appropriate values
-            dns_header = DNSHeader(id=query_id, qr=1, opcode=opcode, rd=rd, qdcount=qdcount, ancount=qdcount)
-
             # Parse the DNS question section
-            questions, offset = parse_questions(buf, 12)  # Domain starts after the DNS header
+            questions, offset = parse_questions(buf, 12)
             
-            question_section = b''
-            answer_section = b''
-
-            # Build question and answer sections
+            responses = []
+            
             for domain, qtype, qclass in questions:
-                # Create the question section
-                dns_question = DNSQuestion(domain)
-                question_section += dns_question.create_question_section()
+                # Forward the query and get the response
+                dns_query = DNSHeader(id=query_id, qr=0, opcode=opcode, rd=rd, ancount=0)
+                dns_query.set_qdcount(1)
                 
-                # Create the answer section
-                dns_answer = DNSAnswer(domain, 60, "8.8.8.8")
-                answer_section += dns_answer.create_answer_section()
+                dns_question = DNSQuestion(domain)
+                question_section = dns_question.create_question_section()
+                
+                query_packet = dns_query.encode() + question_section
+                response = forward_query(query_packet)
+                
+                # Extract the answer section from the response
+                answer_section = response[12:]  # Skipping header part
 
-            # Set QDCOUNT and ANCOUNT in the header
-            dns_header.set_qdcount(len(questions))
-            dns_header.set_ancount(len(questions))
+                # Create a DNS header for the response
+                dns_header = DNSHeader(id=query_id, qr=1, opcode=opcode, rd=rd, ancount=1)
+                dns_header.set_qdcount(len(questions))
+                dns_header.set_ancount(1)
+                
+                responses.append(dns_header.encode() + question_section + answer_section)
             
-            # Combine header, question, and answer sections into the response
-            response = dns_header.encode() + question_section + answer_section
+            # Send all responses back to the original requester
+            for response in responses:
+                udp_socket.sendto(response, source)
 
-            # Send the DNS response
-            udp_socket.sendto(response, source)
         except Exception as e:
-            print(f"Error receiving data: {e}")
+            print(f"Error receiving or forwarding data: {e}")
             break
 
 if __name__ == "__main__":

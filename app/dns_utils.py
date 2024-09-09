@@ -1,3 +1,5 @@
+import socket
+
 def parse_dns_query(buf):
     """
     Extract the required fields from the DNS query packet.
@@ -47,3 +49,14 @@ def parse_questions(buf, offset):
             break
         
     return questions, offset
+
+def forward_query(query_data):
+    """Forward DNS query to the upstream DNS server and get the response."""
+    UPSTREAM_DNS_SERVER = ('8.8.8.8', 53)  # Replace with the actual DNS server address
+
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as upstream_socket:
+        upstream_socket.settimeout(5)  # Set a timeout for the upstream query
+        upstream_socket.sendto(query_data, UPSTREAM_DNS_SERVER)
+        response, _ = upstream_socket.recvfrom(512)
+
+    return response
