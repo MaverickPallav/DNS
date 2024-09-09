@@ -1,6 +1,6 @@
 import socket
 from dns_header import DNSHeader
-from dns_parser import parse_domain_name
+from dns_utils import parse_domain_name, parse_dns_query
 from dns_question import DNSQuestion
 from dns_answer import DNSAnswer
 
@@ -12,20 +12,27 @@ def main():
         try:
             buf, source = udp_socket.recvfrom(512)
 
-            dns_header = DNSHeader(1234, 1)
-
-            domain, offset = parse_domain_name(buf, 12)  # The domain starts after the DNS header
+            # Parse the DNS query to get relevant information
+            query_id, opcode, rd, qdcount = parse_dns_query(buf)
             
+            # Create the DNS header with the appropriate values
+            dns_header = DNSHeader(id=query_id, qr=1, opcode=opcode, rd=rd, ancount=1)
+
+            # Parse the domain name from the DNS query
+            domain, offset = parse_domain_name(buf, 12)  # Domain starts after the DNS header
+            
+            # Create the DNS question section
             dns_question = DNSQuestion(domain)
             question = dns_question.create_question_section()
 
+            # Create the DNS answer section
             dns_answer = DNSAnswer(domain, 60, "8.8.8.8")
             answer = dns_answer.create_answer_section()
 
-            dns_header.set_ancount(1)
-            
+            # Combine header, question, and answer sections into the response
             response = dns_header.encode() + question + answer
 
+            # Send the DNS response
             udp_socket.sendto(response, source)
         except Exception as e:
             print(f"Error receiving data: {e}")
