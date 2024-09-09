@@ -43,12 +43,12 @@ def main():
                 response_packet = dns_header.encode() + question_section + answer_section
 
                 # Debugging info
-                print(f"Query ID: {query_id}")
-                print(f"Header length: {len(dns_header.encode())}")
-                print(f"Question length: {len(question_section)}")
-                print(f"Answer length: {len(answer_section)}")
-                print(f"Total response length: {len(response_packet)}")
-                print(f"Response Packet (hex): {response_packet.hex()}")
+                # print(f"Query ID: {query_id}")
+                # print(f"Header length: {len(dns_header.encode())}")
+                # print(f"Question length: {len(question_section)}")
+                # print(f"Answer length: {len(answer_section)}")
+                # print(f"Total response length: {len(response_packet)}")
+                # print(f"Response Packet (hex): {response_packet.hex()}")
 
                 # Send the response back to the original requester
                 udp_socket.sendto(response_packet, source)
