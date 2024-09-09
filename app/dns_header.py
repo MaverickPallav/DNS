@@ -3,6 +3,7 @@ class DNSHeader:
         self.header = bytearray(12)
         self.set_id(id)
         self.set_qr(qr)
+        self.set_qdcount(1)
 
     def set_id(self, value: int):
         if not (0 <= value <= 65535):
@@ -16,6 +17,11 @@ class DNSHeader:
             self.header[2] |= 0x80
         else:
             self.header[2] &= 0x7F
+    
+    def set_qdcount(self, count: int):
+        """Set QDCOUNT, the number of questions in the DNS query."""
+        self.header[4] = (count >> 8) & 0xFF
+        self.header[5] = count & 0xFF
     
     def encode(self):
         return self.header
