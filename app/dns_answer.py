@@ -4,18 +4,10 @@ class DNSAnswer:
         self.ttl = ttl
         self.ip_address = ip_address
 
-    def encode_domain_name(self) -> bytes:
-        """Encode the domain name into DNS label format."""
-        labels = self.domain.split(".")
-        encoded_name = b""
-        for label in labels:
-            encoded_name += bytes([len(label)]) + label.encode("utf-8")
-        encoded_name += b"\x00"  # Null byte to terminate the domain name
-        return encoded_name
-
-    def create_answer_section(self) -> bytes:
-        """Create the answer section for the DNS response."""
-        name = self.encode_domain_name()
+    def create_answer_section(self, domain_pointer: bytes) -> bytes:
+        """Create the answer section for the DNS response using a domain name pointer."""
+        # Domain name should be a pointer in the response section
+        # Use the provided domain_pointer directly
         
         # Type is 1 (A record), encoded as 2 bytes
         rtype = (1).to_bytes(2, byteorder='big')
@@ -33,4 +25,4 @@ class DNSAnswer:
         rdata = bytes(map(int, self.ip_address.split(".")))
         
         # Combine all parts of the answer section
-        return name + rtype + rclass + ttl + rdlength + rdata
+        return domain_pointer + rtype + rclass + ttl + rdlength + rdata
